@@ -11,9 +11,12 @@
 #'        default is \code{NULL} for both. If both are supplied, posterior
 #'        medians and 90% CI are plotted alongside the observed data.
 #' @param use_color logical, if \code{TRUE}: use colors for contexts
-#' @param name description
+#' @param return_post_mat return the plotting data visibly
+#' @param return_full_post return the full posterior for all contexts, this
+#'        takes priority over \code{return_post_mat=TRUE}
 #'
-#' @return a plot and a matrix with the underlying data generated for the plot
+#' @return a plot and (invisibly) a matrix with the underlying data
+#'         generated for the plot
 
 
 context_distribution_overids <- function(xdata,
@@ -33,8 +36,24 @@ context_distribution_overids <- function(xdata,
                                          pt.cex.mod = 0.8,
                                          lwd.mod = 1,
                                          return_post_mat = FALSE,
+                                         return_full_post = FALSE,
                                          plot_model = TRUE
                                          ) {
+
+  # return full posterior before starting plotting...
+  if (return_full_post) {
+    if (is.null(stanmod) || is.null(standat)) {
+      stop("can't return posterior samples unless model and standata are ",
+           "supplied via 'stanmod = <...>' and 'standat = <...>",
+           call. = FALSE)
+    }
+    post_full <- stanmod$draws("pred_mat_rep_multiplied", format = "draws_matrix")
+    wc_num <- which(names(standat$label_calltype) == which_call)
+    post_full <- post_full[, grepl(paste0("[", wc_num, ","), colnames(post_full), fixed = TRUE)]
+    post_full <- matrix(post_full, nrow = nrow(post_full))
+    colnames(post_full) <- names(standat$label_context)
+    return(post_full)
+  }
 
   callname <- c("call.name", "calltype")[which(c("call.name", "calltype") %in% colnames(xdata))]
 
